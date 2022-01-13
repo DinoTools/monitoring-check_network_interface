@@ -58,6 +58,9 @@ class NetworkResource(nagiosplugin.Resource):
         if_stats = ifs_stats[self.if_name]
         if_counters = ifs_counters[self.if_name]
 
+        logger.debug(f"{self.if_name} reported speed: {if_stats.speed}")
+        logger.debug(f"{self.if_name} reported mtu: {if_stats.mtu}")
+
         yield nagiosplugin.Metric(
             name=f"{self.if_name}.status",
             value=if_stats.isup,

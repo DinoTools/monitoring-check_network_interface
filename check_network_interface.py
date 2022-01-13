@@ -5,6 +5,7 @@
 import argparse
 from datetime import datetime
 import logging
+import re
 from typing import Any, Dict, Optional
 
 import nagiosplugin
@@ -106,7 +107,7 @@ class NetworkResource(nagiosplugin.Resource):
                 value=values[value_name],
                 uom=value_uom_mappings.get(value_name),
             )
-        with nagiosplugin.Cookie("/tmp/foo.data") as cookie:
+        with nagiosplugin.Cookie(f"/tmp/check_network_interface_{self.if_name}.data") as cookie:
             last_time_tuple = cookie.get("last_time")
             elapsed_seconds = None
             if isinstance(last_time_tuple, (list, tuple)):
@@ -149,9 +150,18 @@ def main():
     argp.add_argument(
         "-i",
         "--interface",
+        dest="interfaces",
         required=True,
         help="Name of the interface",
-        metavar="NAME"
+        metavar="NAME",
+        action="append",
+    )
+
+    argp.add_argument(
+        "--regex",
+        default=False,
+        help="Treat interface names as regex pattern",
+        action="store_true",
     )
 
     argument_mappings = {
@@ -193,29 +203,46 @@ def main():
     argp.add_argument('-v', '--verbose', action='count', default=0)
     args = argp.parse_args()
 
-    if_name = args.interface
-    check = nagiosplugin.Check(
-        NetworkResource(
+    interface_names = set()
+    available_interface_names = psutil.net_if_stats().keys()
+    logger.debug(f"Available interfaces: {', '.join(available_interface_names)}")
+    logger.debug(f"Interface patterns/names: {', '.join(args.interfaces)}")
+    logger.debug("Regex: {status}".format(status="enabled" if args.regex else "disabled"))
+    for interface_name_pattern in args.interfaces:
+        if args.regex:
+            regex = re.compile(interface_name_pattern)
+            for interface_name in available_interface_names:
+                if regex.match(interface_name):
+                    interface_names.add(interface_name)
+        else:
+            for interface_name in available_interface_names:
+                if interface_name == interface_name_pattern:
+                    interface_names.add(interface_name)
+
+    logger.debug(f"Matching interfaces: {' '.join(interface_names)}")
+
+    check = nagiosplugin.Check()
+    for if_name in interface_names:
+        check.add(NetworkResource(
             if_name=if_name
-        )
-    )
-
-    check.add(InterfaceStatusContext(f"{if_name}.status"))
-    check.add(nagiosplugin.ScalarContext(f"{if_name}.speed"))
-    check.add(nagiosplugin.ScalarContext(f"{if_name}.mtu"))
-
-    for argument_name, argument_config in argument_mappings.items():
-        extra_kwargs = {}
-        if "fmt_metric" in argument_config:
-            extra_kwargs["fmt_metric"] = argument_config["fmt_metric"]
-
-        context_class = argument_config.get("class", nagiosplugin.ScalarContext)
-        check.add(context_class(
-            name=f"{if_name}.{argument_name}",
-            warning=getattr(args, f"warning_{argument_name}"),
-            critical=getattr(args, f"critical_{argument_name}"),
-            **extra_kwargs
         ))
+
+        check.add(InterfaceStatusContext(f"{if_name}.status"))
+        check.add(nagiosplugin.ScalarContext(f"{if_name}.speed"))
+        check.add(nagiosplugin.ScalarContext(f"{if_name}.mtu"))
+
+        for argument_name, argument_config in argument_mappings.items():
+            extra_kwargs = {}
+            if "fmt_metric" in argument_config:
+                extra_kwargs["fmt_metric"] = argument_config["fmt_metric"]
+
+            context_class = argument_config.get("class", nagiosplugin.ScalarContext)
+            check.add(context_class(
+                name=f"{if_name}.{argument_name}",
+                warning=getattr(args, f"warning_{argument_name}"),
+                critical=getattr(args, f"critical_{argument_name}"),
+                **extra_kwargs
+            ))
 
     check.main(verbose=args.verbose)
 

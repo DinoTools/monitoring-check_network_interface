@@ -82,7 +82,13 @@ class NetworkResource(nagiosplugin.Resource):
         }
         value_uom_mappings = {
             "bytes_sent": "B",
-            "bytes_recv": "B"
+            "bytes_recv": "B",
+            "packets_sent": "c",
+            "packets_recv": "c",
+            "errors_in": "c",
+            "errors_out": "c",
+            "drops_in": "c",
+            "drops_out": "c",
         }
         value_factor_mappings = {
             "bytes_sent_rate": 8,

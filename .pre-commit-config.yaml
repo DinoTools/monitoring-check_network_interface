@@ -38,7 +38,7 @@ repos:
       # Assert that files in tests/ end in _test.py
       - id: name-tests-test
       # Protect specific branches from direct checkins
-      # - id: no-commit-to-branch
+      - id: no-commit-to-branch
       # This hook trims trailing whitespace
       - id: trailing-whitespace
 

@@ -51,16 +51,12 @@ class NetworkResource(nagiosplugin.Resource):
         return (cur_value - old_value) / elapsed_seconds * factor
 
     def probe(self):
-        from pprint import pprint
         cur_time = datetime.now()
         ifs_stats: Dict[str, Any] = psutil.net_if_stats()
         ifs_counters: Dict[str, Any] = psutil.net_io_counters(pernic=True)
 
         if_stats = ifs_stats[self.if_name]
-        pprint(if_stats)
-
         if_counters = ifs_counters[self.if_name]
-        pprint(if_counters)
 
         yield nagiosplugin.Metric(
             name=f"{self.if_name}.status",

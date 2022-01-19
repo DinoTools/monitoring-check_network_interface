@@ -93,14 +93,11 @@ class NetworkResource(nagiosplugin.Resource):
             "drops_in": "c",
             "drops_out": "c",
         }
-        value_factor_mappings = {
-            "bytes_sent_rate": 8,
-            "bytes_recv_rate": 8,
-        }
+        value_factor_mappings = {}
         value_min_mappings = {}
         value_max_mappings = {
-            "bytes_sent_rate": if_stats.speed * 1000 * 1000,
-            "bytes_recv_rate": if_stats.speed * 1000 * 1000,
+            "bytes_sent_rate": if_stats.speed * 1000 * 1000 / 8,
+            "bytes_recv_rate": if_stats.speed * 1000 * 1000 / 8,
         }
         values = {}
         for value_name, attr_name in value_name_mappings.items():
